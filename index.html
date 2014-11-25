@@ -4,7 +4,7 @@
 <link href="lib/css/nv.d3.css" rel="stylesheet" type="text/css">
 <link href="lib/css/teststyle.css" rel="stylesheet" type='text/css'>
 <body>
-  <div class='chart full' id='chart1'>Struktur der Inflation <p id="countryLabel"> </p><svg></svg></div>
+  <div class='chart full' id='chart1'><div id="cateLabel"> </div> <p id="countryLabel"> </p><svg></svg></div>
 
 <script src="lib/js/d3.v3.js"></script>
 <script src="lib/js/nv.d3.js"></script>
@@ -19,18 +19,19 @@
 <script src="lib/js/src/models/stackedAreaChart.js"></script>
 <script src="lib/js/testScript.js"></script>
 <script src="https://code.jquery.com/jquery-1.7.1.min.js"></script>
+<script src="lib/js/jquery.cookie.js"></script>
 
 <p> &nbsp </p>
-<p><b>Select Category:</b></p>
+<p><b>Kategorie ausw&#228;hlen:</b></p>
 <select id="CategorySelection">
-  <option selected value="CP">CP</option>
-  <option value="NATURAL">Natural</option>
-  <option value="CP00">All items</option>
-  <option value="DIFF">Differential Comparison</option>
+  <option value="CP00">Inflationsrate (HVPI)</option>
+  <option selected value="NATURAL">4 Hauptaggregate</option>
+  <option value="CP">12 Hauptgruppen</option>
+  <option value="DIFF">L&#228;ndervergleich</option>
 </select>
 
-<p><b>Select TimeFrame:</b></p>
-From &nbsp   
+<p><b>Periode:</b></p>
+Von &nbsp   
 <select id="TimeFromSelection">
   <option value="820454400000">1996</option>
   <option value="852076800000">1997</option>
@@ -52,7 +53,7 @@ From &nbsp
   <option value="1356998400000">2013</option>
   <option value="1388534400000">2014</option>
 </select>
-&nbsp To &nbsp
+&nbsp bis &nbsp
 <select id="TimeToSelection">
   <option value="820454400000">1996</option>
   <option value="852076800000">1997</option>
@@ -73,7 +74,7 @@ From &nbsp
   <option value="1325376000000">2012</option>
   <option value="1356998400000">2013</option>
   <option value="1388534400000">2014</option>
-  <option selected value="111388534400000">Latest</option>
+  <option selected value="111388534400000">Neuste</option>
 </select>
 
 <p id="countrySelectionLabel"></p>
@@ -81,11 +82,10 @@ From &nbsp
 </form>
 
 <div id="Diff">
-Compare
 <select id="DiffCountry">
 </select>
 
-&nbsp and &nbsp
+&nbsp und &nbsp
 
 <select id="DiffCountry2">
 </select>
@@ -100,31 +100,49 @@ $.getJSON("data/config/BarchartConfig", function(countries) {
 	var selectionName = $("#CategorySelection option:selected").val();
 	if(selectionName !== "DIFF"){
 	    $('#Diff').hide();
-	    $('#countrySelectionLabel').html("<b> Select Country </b>");
-	    $.each(countries.Countries, function( index, value ) {
-		if(value=='AT'){
-			$('<input type="radio" name="Country" checked value="'+value+'">'+value+'</input>').appendTo("#Country");
+	    $('#countrySelectionLabel').html("<b> Land ausw&#228;hlen: </b>");
+	    $.each(countries.Countries, function( index, fullvalue ) {
+		var split = fullvalue.split(';');
+		var value=split[0];
+		var text = split[1];
+		var selectedCountry="AT"
+		if($.cookie("country") && $.cookie("country")!='undefined'){
+			selectedCountry=$.cookie("country")
+		}
+		if(value==selectedCountry){
+			$('<input type="radio" name="Country" checked value="'+value+'">'+text+'</input>').appendTo("#Country");
 		}
 		else{
-			$('<input type="radio" name="Country" value="'+value+'">'+value+'</input>').appendTo("#Country")	
+			$('<input type="radio" name="Country" value="'+value+'">'+text+'</input>').appendTo("#Country")	
 		}
 	    });
 	}
 	else{
-	    $('#countrySelectionLabel').html("<b> Select Countries to compare </b>");
+	    $('#countrySelectionLabel').html("<b> Zu vergleichende L&#228;nder ausw&#228;hlen: </b>");
 	    $('#Diff').show();
-	    $.each(countries.Countries, function( index, value ) {
-		if(value==='AT'){
-			$('<option selected value="'+value+'">'+value+'</option>').appendTo("#DiffCountry");	
-	    	}
-		else{
-			$('<option value="'+value+'">'+value+'</option>').appendTo("#DiffCountry");
+	    $.each(countries.Countries, function( index, fullvalue ) {
+		var split = fullvalue.split(';');
+                var value=split[0];
+                var text = split[1];
+		var diffcountry1='AT'
+		var diffcountry2='EA'
+		if($.cookie("diffcountry1") && $.cookie("diffcountry1")!='undefined'){
+			diffcountry1= $.cookie("diffcountry1")
 		}
-		if(value==='EA'){
-			$('<option selected value="'+value+'">'+value+'</option>').appendTo("#DiffCountry2");
+		if($.cookie("diffcountry2") && $.cookie("diffcountry2")!='undefined'){
+                        diffcountry2= $.cookie("diffcountry2")
+                }
+		if(value===diffcountry1){
+			$('<option selected value="'+value+'">'+text+'</option>').appendTo("#DiffCountry");	
 	    	}
 		else{
-			$('<option value="'+value+'">'+value+'</option>').appendTo("#DiffCountry2");
+			$('<option value="'+value+'">'+text+'</option>').appendTo("#DiffCountry");
+		}
+		if(value===diffcountry2){
+			$('<option selected value="'+value+'">'+text+'</option>').appendTo("#DiffCountry2");
+	    	}
+		else{
+			$('<option value="'+value+'">'+text+'</option>').appendTo("#DiffCountry2");
 		}
 	    });
 	}
@@ -136,11 +154,12 @@ $.getJSON("data/config/BarchartConfig", function(countries) {
 //                $('<option selected value="'+value+'">'+value+'</option>').appendTo("#CategorySelection");
         });
 
-
 //$('#CategorySelection').prop("disabled", true);
  $('#countryLabel').html($('#Country input:radio:checked').val());
 var radioName = $('#Country input:radio:checked').val();
 var selectionName = $("#CategorySelection option:selected").val();
+var selectionText = $("#CategorySelection option:selected").text();
+ $('#cateLabel').html(selectionText);
 if(selectionName !== "DIFF"){
 	mainBody("inputData_"+radioName+"_"+selectionName+".json");
 }
@@ -160,13 +179,12 @@ $('input:radio').live("change",function (event){
 $('#CategorySelection').live("change",function (event){
         selectionName = $(this).attr("value");
 	radioName = $('input:radio:checked').val();
-        /*
-	if(selectionName !== "DIFF"){
-		mainBody("inputData_"+radioName+"_"+selectionName+".json");
-	}
-	else{
-		mainBody("diff/inputData_EAvsAT_NATURAL.json");
-	}*/
+	
+	$.cookie("diffcountry1", $("#DiffCountry option:selected").val());
+	$.cookie("diffcountry2", $("#DiffCountry2 option:selected").val());
+	
+	$.cookie("country", radioName);
+	
 	location.reload();
 });
 
@@ -277,8 +295,12 @@ function defaultChartConfig(container, data, useGuideline) {
                   .y(function(d) { return d[1] })
                   .color(keyColor)
                     ;
-	//IHS: explicitely state that the x scale data is a time scale	
+	//ttvrdic: explicitely state that the x scale data is a time scale	
     chart.xScale(d3.time.scale());
+
+	//ttvrdic: set category in the d3js library. 
+	//necessary because of difference in negative values in diff category	
+    d3.setCategory($("#CategorySelection option:selected").val());
 
     chart.xAxis
 	.ticks(d3.time.months,3) //display data each 3 months
